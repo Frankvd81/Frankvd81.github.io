@@ -8,7 +8,7 @@ app.devices = {};
  
 // UI methods.
 app.ui = {}; 
-/** 
+/**  
  * Object that holds SensorTag UUIDs.
  */
 app.sensortag = {};
@@ -113,15 +113,7 @@ app.ui.displayDeviceList = function()
 	var SensorType;
 	var AdvHeader, CompID;
 	var SensorAdvString=decodeBase64(device.scanRecord);
-
-		CurrentTemp = temperatureCelcius(SensorAdvString.charCodeAt(base+10), SensorAdvString.charCodeAt(base+9),
-								   SensorAdvString.charCodeAt(base+8), SensorAdvString.charCodeAt(base+7));
-		CurrentHumidity = (16777216*SensorAdvString.charCodeAt(base+14)+ 65536*SensorAdvString.charCodeAt(base+13) +
-				  			   256*SensorAdvString.charCodeAt(base+12)+       SensorAdvString.charCodeAt(base+11))/1024;
-		CurrentHumidity = Math.round(CurrentHumidity * 10) / 10;			   				   
-		CurrentPressure = (16777216*SensorAdvString.charCodeAt(base+18)+ 65536*SensorAdvString.charCodeAt(base+17) +
-				  			   256*SensorAdvString.charCodeAt(base+16)+       SensorAdvString.charCodeAt(base+15))/100;
-		CurrentPressure	= Math.round(CurrentPressure);				   
+		   
 		AdvHeader = 256*SensorAdvString.charCodeAt(base+3)+SensorAdvString.charCodeAt(base+2); 
 		CompID = 256*SensorAdvString.charCodeAt(base+5)+SensorAdvString.charCodeAt(base+4); 
 		SensorType = SensorAdvString.charCodeAt(base+6);
@@ -139,7 +131,17 @@ app.ui.displayDeviceList = function()
 				 break;
 			  default:
 			     SenseName = " Onbekend"
-			}  
+			} 
+			// Get the sensor data from the advertising string
+			CurrentTemp = temperatureCelcius(SensorAdvString.charCodeAt(base+10), SensorAdvString.charCodeAt(base+9),
+								   SensorAdvString.charCodeAt(base+8), SensorAdvString.charCodeAt(base+7));
+			CurrentHumidity = (16777216*SensorAdvString.charCodeAt(base+14)+ 65536*SensorAdvString.charCodeAt(base+13) +
+				  			   256*SensorAdvString.charCodeAt(base+12)+       SensorAdvString.charCodeAt(base+11))/1024;
+			CurrentHumidity = Math.round(CurrentHumidity * 10) / 10;			   				   
+			CurrentPressure = (16777216*SensorAdvString.charCodeAt(base+18)+ 65536*SensorAdvString.charCodeAt(base+17) +
+				  			   256*SensorAdvString.charCodeAt(base+16)+       SensorAdvString.charCodeAt(base+15))/100;
+			CurrentPressure	= Math.round(CurrentPressure);
+			
 			// Map the RSSI value to a width in percent for the indicator.
 			var rssiWidth = 1; // Used when RSSI is zero or greater.
 			if (device.rssi < -100) { rssiWidth = 100; }
@@ -168,7 +170,7 @@ app.ui.displayDeviceList = function()
 			); 
 
 				$('#found-devices').append(element);
-				console.log('Temperature:');
+				//console.log('Temperature:');
 			
 		}
 	});
@@ -199,13 +201,16 @@ temperatureCelcius = function (v4,v3,v2,v1) {
 	// The temperature in degree C is coded as 4 values v1,2,3,4,  This is 32 bit signed value
 	// bit 31 is the sign bit for temperatures below zero
 	// bit [30:0] holds the temparature
-	var t=0, sign=0;
+	var t=0;
 	if (v4 > 127) 
 	{
-		sign=1;
 		v4=v4-128;
+		t= ((16777216*v4+65536*v3+256*v2+v1)-2147483648)/100;
     }
-	t= (16777216*v4+65536*v3+256*v2+v1)/100;
+	else{
+		t= (16777216*v4+65536*v3+256*v2+v1)/100;
+	}
+	//console.log('  -> Temperature: ' + t);
 	return t;
 }
 
