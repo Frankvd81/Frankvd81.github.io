@@ -1,54 +1,108 @@
- <!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, user-scalable=no,
-		shrink-to-fit=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+<!DOCTYPE html>
+<html lang="en-US">
+	<head>
+		<title>WebBluetooth trial</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	<title>Frank's Evothings apps test</title>
-<!--	
-	<link rel="shortcut icon" href="images/icon/favicon.ico">
-	<link rel="apple-touch-icon" sizes="57x57" href="images/icon/apple-icon-57x57.png">
-	<link rel="apple-touch-icon" sizes="60x60" href="images/icon/apple-icon-60x60.png">
-	<link rel="apple-touch-icon" sizes="72x72" href="images/icon/apple-icon-72x72.png">
-	<link rel="apple-touch-icon" sizes="76x76" href="images/icon/apple-icon-76x76.png">
-	<link rel="apple-touch-icon" sizes="114x114" href="images/icon/apple-icon-114x114.png">
-	<link rel="apple-touch-icon" sizes="120x120" href="images/icon/apple-icon-120x120.png">
-	<link rel="apple-touch-icon" sizes="144x144" href="images/icon/apple-icon-144x144.png">
-	<link rel="apple-touch-icon" sizes="152x152" href="images/icon/apple-icon-152x152.png">
-	<link rel="apple-touch-icon" sizes="180x180" href="images/icon/apple-icon-180x180.png">
-	<link rel="icon" type="image/png" sizes="192x192"  href="images/icon/android-icon-192x192.png">
-	<link rel="icon" type="image/png" sizes="32x32" href="images/icon/favicon-32x32.png">
-	<link rel="icon" type="image/png" sizes="96x96" href="images/icon/favicon-96x96.png">
-	<link rel="icon" type="image/png" sizes="16x16" href="images/icon/favicon-16x16.png">
-	<link rel="manifest" href="images/icon/manifest.json">
-	<meta name="msapplication-TileColor" content="#ffffff">
-	<meta name="msapplication-TileImage" content="images/icon/ms-icon-144x144.png">
-	<meta name="theme-color" content="#ffffff">
-	-->
-
-	<style>
-		@import 'ui/css/evothings-app.css';
-	</style>
-
-	
-	<script>
-		// Redirect console if running from Evothings Workbench.
-		if (window.hyper) { console.log = hyper.log }
-	</script>
-
-</head>
-
-<body ontouchstart=""><!-- ontouchstart="" enables low-delay CSS transitions. -->
+    <script>
 
 
-	<a href="evos://Frankvd81.github.io/WeatherApp/index.html">
-	<button class = "red wide">Weer Appie</button>
-	
+			var inboundChar;
+			var outboundChar;
+			var device;
+			
+			// Define the CodeLess UUIDs 
+			var CODELESS_SVC_UUID 	= "866d3b04-e674-40dc-9c05-b7f91bec6e83";
+			var INBOUND_CHAR_UUID 	= "914f8fb9-e8cd-411d-b7d1-14594de45425";
+			var OUTBOUND_CHAR_UUID 	= "3bb535aa-50b2-4fbe-aa09-6b06dc59a404";
+			var CNTRL_CHAR_UUID		= "e2048b39-d4f9-4a45-9f25-1856c10d5639";
+			var WATERLVL_SVC_UUID   = "18424398-7cbc-11e9-8f9e-2a86e4085a59";
+			var WATERLVL_CHAR       = "15005991-b131-3396-014c-664c9867b917";
+			var BATTERYLVL_CHAR     = "6eb675ab-8bd1-1b9a-7444-621e52ec6823";
 
+			// Display text in log field text area 
+			function log(text)
+			{
+				var textarea = document.getElementById('log');
+				textarea.value += "\n" + text;
+				textarea.scrollTop = textarea.scrollHeight;
+			}
 
-	<script src="cordova.js"></script>
-	<script src="libs/evothings/evothings.js"></script>
-	<script src="libs/evothings/ui/ui.js"></script>
-</body>
+			// Incoming GATT notification was received
+			async function incomingData(event){
+				// Read data from BLE CodeLess peer
+				let readInValue = await waterlvlChar.readValue();
+				let decoder = new TextDecoder('utf-8');
+				// Log the incoming string (format slightly)
+				log(" <- " + decoder.decode(readInValue).replace('\r','\r <- ').replace('\n','').replace('\0',''));
+			}
+
+			async function onDisconnected()
+			{
+				log("Bluetooth connection terminated!");
+			}
+
+			async function bleDisconnect()
+			{
+				log("Disconnecting");
+				if (device.gatt.connected) {
+				    device.gatt.disconnect();
+				}
+				else {
+				    log('> Bluetooth Device is already disconnected');
+				}
+			}
+
+			// Scan, connect and explore CodeLess BLE device
+			async function ble_connect() {
+				try {
+					// Define a scan filter and prepare for interaction with Codeless Service
+					log('Requesting Bluetooth Device...');
+					device  = await navigator.bluetooth.requestDevice({
+						//filters: [{name: 'WTR_LVL'}],
+						//optionalServices: [WATERLVL_SVC_UUID]
+					});	
+					device.addEventListener('gattserverdisconnected', onDisconnected);	
+					// Connect to device GATT and perform attribute discovery
+					server = await device.gatt.connect();
+					const service = await server.getPrimaryService(WATERLVL_SVC_UUID);
+					waterlvlChar = await service.getCharacteristic(WATERLVL_CHAR);
+					batteryChar = await service.getCharacteristic(BATTERYLVL_CHAR);
+					//const flowcontrolChar = await service.getCharacteristic(CNTRL_CHAR_UUID);
+					// Subscribe to notifications
+					await waterlvlChar.startNotifications();
+					waterlvlChar.addEventListener('characteristicvaluechanged', incomingData);
+					log('Ready to communicate!\n');
+				}
+				catch(error) {
+					log('Failed: ' + error);
+				}
+			}
+		</script>	
+	</head>
+
+	<body> 
+		<h1>Water level meter:</h1>
+		<p>
+			This application connects to the wireless water level meter and reports the measured value
+		</p>
+		<button type="button" onclick="ble_connect()">
+			Click me to scan for CodeLess BLE devices
+		</button>
+		<br/>
+		<button type="button" onclick="ble_readvalues()">
+			Click me to read the water and battery level
+		</button>
+		<br/>
+		<button type="button" onclick="bleDisconnect()">
+			Click me to disconnect
+		</button>
+		<br/>
+		<br/>Results:<br/>
+		<textarea id="log" rows="2" cols="20" ></textarea>
+		<br/><br/><br/>
+		
+
+	</body>
 </html>
