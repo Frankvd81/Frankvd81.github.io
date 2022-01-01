@@ -7,16 +7,9 @@
 
     <script>
 
-
-			var inboundChar;
-			var outboundChar;
 			var device;
 			
 			// Define the CodeLess UUIDs 
-			var CODELESS_SVC_UUID 	= "866d3b04-e674-40dc-9c05-b7f91bec6e83";
-			var INBOUND_CHAR_UUID 	= "914f8fb9-e8cd-411d-b7d1-14594de45425";
-			var OUTBOUND_CHAR_UUID 	= "3bb535aa-50b2-4fbe-aa09-6b06dc59a404";
-			var CNTRL_CHAR_UUID		= "e2048b39-d4f9-4a45-9f25-1856c10d5639";
 			var WATERLVL_SVC_UUID   = "18424398-7cbc-11e9-8f9e-2a86e4085a59";
 			var WATERLVL_CHAR       = "15005991-b131-3396-014c-664c9867b917";
 			var BATTERYLVL_CHAR     = "6eb675ab-8bd1-1b9a-7444-621e52ec6823";
@@ -29,19 +22,27 @@
 				textarea.scrollTop = textarea.scrollHeight;
 			}
 
-			// Incoming GATT notification was received
-			async function incomingData(event){
-				// Read data from BLE CodeLess peer
-				let readInValue = await waterlvlChar.readValue();
-				let decoder = new TextDecoder('utf-8');
-				// Log the incoming string (format slightly)
-				log(" <- " + decoder.decode(readInValue).replace('\r','\r <- ').replace('\n','').replace('\0',''));
+
+			function ble_readvalues() {
+				waterlvlChar.startNotifications();
+				waterlvlChar.addEventListener('characteristicvaluechanged', handleNotifications);
 			}
 
-			async function onDisconnected()
-			{
-				log("Bluetooth connection terminated!");
+			function handleNotifications(event) {
+				//log('In the notifications routine\n');  
+				let val0 = event.target.value.getUint8(0);	
+				let val1 = event.target.value.getUint8(1);
+				let waterLevel = 256*val1+val0
+                log('Water Level is ' + waterLevel + ' cm');
+				ble_stopnotifications();
 			}
+
+			function ble_stopnotifications() {
+				waterlvlChar.stopNotifications();
+      			waterlvlChar.removeEventListener('characteristicvaluechanged', handleNotifications);
+				//log('> Notifications stopped!\n');
+			}			
+
 
 			async function bleDisconnect()
 			{
@@ -60,20 +61,17 @@
 					// Define a scan filter and prepare for interaction with Codeless Service
 					log('Requesting Bluetooth Device...');
 					device  = await navigator.bluetooth.requestDevice({
+						acceptAllDevices: true,
 						//filters: [{name: 'WTR_LVL'}],
-						//optionalServices: [WATERLVL_SVC_UUID]
-					});	
-					device.addEventListener('gattserverdisconnected', onDisconnected);	
+						optionalServices: [WATERLVL_SVC_UUID]
+					});		
 					// Connect to device GATT and perform attribute discovery
 					server = await device.gatt.connect();
 					const service = await server.getPrimaryService(WATERLVL_SVC_UUID);
 					waterlvlChar = await service.getCharacteristic(WATERLVL_CHAR);
 					batteryChar = await service.getCharacteristic(BATTERYLVL_CHAR);
 					//const flowcontrolChar = await service.getCharacteristic(CNTRL_CHAR_UUID);
-					// Subscribe to notifications
-					await waterlvlChar.startNotifications();
-					waterlvlChar.addEventListener('characteristicvaluechanged', incomingData);
-					log('Ready to communicate!\n');
+					log('Connected!\n');
 				}
 				catch(error) {
 					log('Failed: ' + error);
@@ -88,11 +86,11 @@
 			This application connects to the wireless water level meter and reports the measured value
 		</p>
 		<button type="button" onclick="ble_connect()">
-			Click me to scan for CodeLess BLE devices
+			Click me to scan for CodeLess BLE devices!
 		</button>
 		<br/>
 		<button type="button" onclick="ble_readvalues()">
-			Click me to read the water and battery level
+			Start Notifications
 		</button>
 		<br/>
 		<button type="button" onclick="bleDisconnect()">
@@ -106,3 +104,4 @@
 
 	</body>
 </html>
+
