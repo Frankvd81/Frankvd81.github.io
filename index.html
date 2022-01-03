@@ -5,6 +5,30 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+		<style>
+			body {
+  				background-color: hsl(189, 72%, 65%);
+			}
+			.button {
+			  background-color: #053b68;
+			  border: yes;
+			  color: white;
+			  padding: 16px;
+			  border-radius: 8px;
+			  text-align: center;
+			  text-decoration: none;
+			  display: inline-block;
+			  font-size: 14px;
+			  margin: 4px;
+			  cursor: pointer;
+			}
+			.button:active {
+  			  background-color: #3e8e41;
+  			  box-shadow: 0 5px #666;
+  			  transform: translateY(4px);
+			}
+	</style>	
+
     <script>
 
 			var device;
@@ -46,9 +70,10 @@
 
 			async function bleDisconnect()
 			{
-				log("Disconnecting");
 				if (device.gatt.connected) {
 				    device.gatt.disconnect();
+					document.getElementById("morebuttons").style.visibility="hidden";
+					log("Disconnected");
 				}
 				else {
 				    log('> Bluetooth Device is already disconnected');
@@ -59,18 +84,20 @@
 			async function ble_connect() {
 				try {
 					// Define a scan filter and prepare for interaction with Codeless Service
-					log('Requesting Bluetooth Device...');
+					
 					device  = await navigator.bluetooth.requestDevice({
 						acceptAllDevices: true,
 						//filters: [{name: 'WTR_LVL'}],
 						optionalServices: [WATERLVL_SVC_UUID]
-					});		
+					});	
+					log('Wait for the device to connect...\n');	
 					// Connect to device GATT and perform attribute discovery
 					server = await device.gatt.connect();
 					const service = await server.getPrimaryService(WATERLVL_SVC_UUID);
 					waterlvlChar = await service.getCharacteristic(WATERLVL_CHAR);
 					batteryChar = await service.getCharacteristic(BATTERYLVL_CHAR);
 					//const flowcontrolChar = await service.getCharacteristic(CNTRL_CHAR_UUID);
+					document.getElementById("morebuttons").style.visibility="visible";
 					log('Connected!\n');
 				}
 				catch(error) {
@@ -81,26 +108,33 @@
 	</head>
 
 	<body> 
-		<h1>Water level meter:</h1>
+		<h1>Water Level Sensor</h1>
 		<p>
 			This application connects to the wireless water level meter and reports the measured value
 		</p>
-		<button type="button" onclick="ble_connect()">
-			Click me to scan for CodeLess BLE devices!
-		</button>
-		<br/>
-		<button type="button" onclick="ble_readvalues()">
-			Start Notifications
-		</button>
-		<br/>
-		<button type="button" onclick="bleDisconnect()">
-			Click me to disconnect
-		</button>
-		<br/>
-		<br/>Results:<br/>
-		<textarea id="log" rows="20" cols="40" ></textarea>
-		<br/><br/><br/>
+
+		<div id="scan">
+			<button class="button" type="button" onclick="ble_connect()">
+				Scan for Water Level Sensor
+			</button>
+			<br/>
+		</div>
 		
+		<div id="morebuttons" style="visibility:hidden;">
+			<button class="button" type="button" onclick="ble_readvalues()" >
+				Read value
+			</button>
+			<br/>
+			<button class="button" type="button" onclick="bleDisconnect()" >
+				Disconnect
+			</button>
+			<br/>
+		</div>
+		
+		<div id="results">
+			<br/>Results:<br/>
+			<textarea id="log" rows="10" cols="40" ></textarea>
+		</div>	
 
 	</body>
 </html>
