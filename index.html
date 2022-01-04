@@ -6,7 +6,7 @@
 
 <html lang="en-US">
 	<head>
-		<title>WebBluetooth trial</title>
+		<title>Water Level App</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -96,7 +96,7 @@
 					device  = await navigator.bluetooth.requestDevice({
 						acceptAllDevices: false,
 						filters: [{name: '💧 WTR_LVL'}],
-						//optionalServices: [WATERLVL_SVC_UUID, BATTERYLVL_SVC_UUID]
+						optionalServices: [WATERLVL_SVC_UUID, BATTERYLVL_SVC_UUID]
 					});	
 					log('Wait for the device to connect...\n');	
 					// Connect to device GATT and perform attribute discovery
@@ -117,7 +117,7 @@
 	</head>
 
 	<body> 
-		<h1>Water Level Sensor</h1>
+		<h1>Water Level Application</h1>
 		<p>
 			This application connects to the wireless water level meter and reports the measured value
 		</p>
