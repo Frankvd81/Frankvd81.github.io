@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+
+<!-- where to find:				-->
+<!-- Inspect BLE device in Chrome: chrome://bluetooth-internals/devices#devices -->
+<!-- https://googlechrome.github.io/samples/web-bluetooth/battery-level-async-await.html -->
+
 <html lang="en-US">
 	<head>
 		<title>WebBluetooth trial</title>
@@ -35,8 +40,9 @@
 			
 			// Define the CodeLess UUIDs 
 			var WATERLVL_SVC_UUID   = "18424398-7cbc-11e9-8f9e-2a86e4085a59";
+			var BATTERYLVL_SVC_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
 			var WATERLVL_CHAR       = "15005991-b131-3396-014c-664c9867b917";
-			var BATTERYLVL_CHAR     = "6eb675ab-8bd1-1b9a-7444-621e52ec6823";
+			var BATTERYLVL_CHAR     = "00002a19-0000-1000-8000-00805f9b34fb";
 
 			// Display text in log field text area 
 			function log(text)
@@ -56,8 +62,10 @@
 				//log('In the notifications routine\n');  
 				let val0 = event.target.value.getUint8(0);	
 				let val1 = event.target.value.getUint8(1);
+				let batlevel = batvalue.getUint8(0)
 				let waterLevel = 256*val1+val0
-                log('Water Level is ' + waterLevel + ' cm');
+                log('Water Level is:   ' + waterLevel + 'cm'); 
+				log('Battery level is: ' + batlevel   + '% \n\r');
 				ble_stopnotifications();
 			}
 
@@ -86,17 +94,18 @@
 					// Define a scan filter and prepare for interaction with Codeless Service
 					
 					device  = await navigator.bluetooth.requestDevice({
-						acceptAllDevices: true,
-						//filters: [{name: 'WTR_LVL'}],
-						optionalServices: [WATERLVL_SVC_UUID]
+						acceptAllDevices: false,
+						filters: [{name: '💧 WTR_LVL'}],
+						//optionalServices: [WATERLVL_SVC_UUID, BATTERYLVL_SVC_UUID]
 					});	
 					log('Wait for the device to connect...\n');	
 					// Connect to device GATT and perform attribute discovery
 					server = await device.gatt.connect();
-					const service = await server.getPrimaryService(WATERLVL_SVC_UUID);
-					waterlvlChar = await service.getCharacteristic(WATERLVL_CHAR);
-					batteryChar = await service.getCharacteristic(BATTERYLVL_CHAR);
-					//const flowcontrolChar = await service.getCharacteristic(CNTRL_CHAR_UUID);
+					const waterlevelservice = await server.getPrimaryService(WATERLVL_SVC_UUID);
+					const batterylevelservice = await server.getPrimaryService(BATTERYLVL_SVC_UUID);
+					waterlvlChar = await waterlevelservice.getCharacteristic(WATERLVL_CHAR);
+					batteryChar = await batterylevelservice.getCharacteristic(BATTERYLVL_CHAR);
+					batvalue = await batteryChar.readValue();
 					document.getElementById("morebuttons").style.visibility="visible";
 					log('Connected!\n');
 				}
