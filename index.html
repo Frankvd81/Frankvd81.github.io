@@ -53,9 +53,25 @@
 			}
 
 
-			function ble_readvalues() {
-				waterlvlChar.startNotifications();
-				waterlvlChar.addEventListener('characteristicvaluechanged', handleNotifications);
+			async function ble_readvalues() {
+				waterlvlChar.addEventListener('characteristicvaluechanged', handleWaterLevelChanged);
+				await waterlvlChar.readValue();
+				batteryChar.addEventListener('characteristicvaluechanged', handleBatteryLevelChanged);
+				await batteryChar.readValue();
+			}	
+
+
+            function handleWaterLevelChanged() {
+				let val0 = event.target.value.getUint8(0);
+				let val1 = event.target.value.getUint8(1);
+				let waterlevel = 256*val1+val0
+				log('Water Level is:   ' + waterlevel + 'cm'); 
+			}
+
+
+			function handleBatteryLevelChanged() {
+				let batlevel = event.target.value.getUint8(0);
+				log('Battery level is: ' + batlevel   + '% \n\r');
 			}
 
 			function handleNotifications(event) {
@@ -66,7 +82,6 @@
 				let waterLevel = 256*val1+val0
                 log('Water Level is:   ' + waterLevel + 'cm'); 
 				log('Battery level is: ' + batlevel   + '% \n\r');
-				ble_stopnotifications();
 			}
 
 			function ble_stopnotifications() {
@@ -78,14 +93,18 @@
 
 			async function bleDisconnect()
 			{
+				
+				document.getElementById("morebuttons").style.visibility="hidden";
 				if (device.gatt.connected) {
 				    device.gatt.disconnect();
-					document.getElementById("morebuttons").style.visibility="hidden";
 					log("Disconnected");
 				}
 				else {
 				    log('> Bluetooth Device is already disconnected');
 				}
+				device = null;
+				waterlvlChar = null;
+				batteryChar = null;
 			}
 
 			// Scan, connect and explore CodeLess BLE device
@@ -94,8 +113,8 @@
 					// Define a scan filter and prepare for interaction with Codeless Service
 					
 					device  = await navigator.bluetooth.requestDevice({
-						acceptAllDevices: false,
-						filters: [{name: '💧 WTR_LVL'}],
+						acceptAllDevices: true,
+						// filters: [{name: '💧 WTR_LVL'}],
 						optionalServices: [WATERLVL_SVC_UUID, BATTERYLVL_SVC_UUID]
 					});	
 					log('Wait for the device to connect...\n');	
@@ -105,7 +124,8 @@
 					const batterylevelservice = await server.getPrimaryService(BATTERYLVL_SVC_UUID);
 					waterlvlChar = await waterlevelservice.getCharacteristic(WATERLVL_CHAR);
 					batteryChar = await batterylevelservice.getCharacteristic(BATTERYLVL_CHAR);
-					batvalue = await batteryChar.readValue();
+
+			
 					document.getElementById("morebuttons").style.visibility="visible";
 					log('Connected!\n');
 				}
